@@ -1,0 +1,19 @@
+# Backend (Maven/Java)
+backend/target/
+backend/src/main/resources/application-local.yml
+
+# Client (Rust/Cargo)
+client/target/
+client/Cargo.lock
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local run/install logs
+.*.log

@@ -1,0 +1,5 @@
+# Copy to application-local.yml (gitignored) and fill in your AISStream API key.
+# Run with: mvn spring-boot:run -Dspring-boot.run.profiles=local
+c3:
+  aisstream:
+    api-key: "YOUR_AISSTREAM_API_KEY"

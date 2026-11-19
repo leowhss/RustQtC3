@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>dsta</groupId>
+  <artifactId>rf-analysis</artifactId>
+  <version>1.0.0</version>
+  <packaging>jar</packaging>
+
+  <properties>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <geotools.version>29.6</geotools.version>
+    <!-- Community fork of NASA WorldWind Java (gov.nasa:worldwind 2.0.0 is stale, requires an old
+         JOGL version with known Windows graphics-configuration bugs). This fork bundles a modern
+         JOGL internally (com.jogamp.opengl package, with Windows natives) under the same
+         gov.nasa.worldwind.* package names. -->
+    <worldwind.version>2.1.0.206</worldwind.version>
+  </properties>
+
+  <repositories>
+    <repository>
+      <id>osgeo</id>
+      <name>OSGeo Release Repository</name>
+      <url>https://repo.osgeo.org/repository/release/</url>
+    </repository>
+  </repositories>
+
+  <dependencies>
+    <!-- Proprietary propagation model jar (no public Maven coordinates).
+         Install it into the local repo first:
+         mvn install:install-file -Dfile=lib/prop.jar -DgroupId=dsta -DartifactId=prop -Dversion=1.0.0 -Dpackaging=jar -->
+    <dependency>
+      <groupId>dsta</groupId>
+      <artifactId>prop</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+
+    <!-- GeoTools: DEM / WorldCover GeoTIFF reading -->
+    <dependency>
+      <groupId>org.geotools</groupId>
+      <artifactId>gt-geotiff</artifactId>
+      <version>${geotools.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.geotools</groupId>
+      <artifactId>gt-coverage</artifactId>
+      <version>${geotools.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.geotools</groupId>
+      <artifactId>gt-epsg-hsql</artifactId>
+      <version>${geotools.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.geotools</groupId>
+      <artifactId>gt-main</artifactId>
+      <version>${geotools.version}</version>
+    </dependency>
+
+    <!-- NASA WorldWind Java (community fork with bundled modern JOGL + natives):
+         3D globe/terrain engine for the map view. -->
+    <dependency>
+      <groupId>com.github.pcmehlitz</groupId>
+      <artifactId>worldwind-pcm</artifactId>
+      <version>${worldwind.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <finalName>rf-analysis</finalName>
+    <sourceDirectory>src</sourceDirectory>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.2.0</version>
+        <configuration>
+          <mainClass>dsta.rfmap.MapApp</mainClass>
+        </configuration>
+      </plugin>
+      <plugin>
+        <!-- Build a single runnable jar with all dependencies -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>3.7.1</version>
+        <configuration>
+          <archive>
+            <manifest>
+              <mainClass>dsta.rfmap.MapApp</mainClass>
+            </manifest>
+          </archive>
+          <descriptorRefs>
+            <descriptorRef>jar-with-dependencies</descriptorRef>
+          </descriptorRefs>
+        </configuration>
+        <executions>
+          <execution>
+            <id>make-assembly</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

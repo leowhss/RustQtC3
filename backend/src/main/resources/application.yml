@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: rustqtc3-backend
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/rustqtc3
+
+server:
+  port: 8080
+
+c3:
+  # Default bbox covers the Singapore Strait (dense air + sea traffic for demo purposes).
+  opensky:
+    lamin: 1.0
+    lomin: 103.0
+    lamax: 1.6
+    lomax: 104.2
+    poll-interval-ms: 12000
+  aisstream:
+    api-key: ""
+  history:
+    retention-hours: 48
+
+logging:
+  level:
+    com.rustqtc3: INFO

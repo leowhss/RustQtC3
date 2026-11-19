@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>RustQtC3 3D Map (MapLibre)</title>
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.css" />
+    <script src="https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.js"></script>
+    <style>
+        html, body, #mapContainer {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #1b1f24;
+        }
+    </style>
+</head>
+<body>
+    <div id="mapContainer"></div>
+    <script>
+        // No API key needed: plain OpenStreetMap raster tiles, same source
+        // the 2D tab already uses, matching the app's no-API-key approach.
+        // MapLibre is open-source (unlike Mapbox GL, which requires a token
+        // beyond its free tier) and needs no ion-style account either.
+        const map = new maplibregl.Map({
+            container: "mapContainer",
+            style: {
+                version: 8,
+                // Required for any symbol/text layer (e.g. track labels below),
+                // even on an otherwise raster-only style. MapLibre's own free,
+                // no-key demo glyph server — no account needed.
+                glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+                sources: {
+                    osm: {
+                        type: "raster",
+                        tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+                        tileSize: 256,
+                        attribution: "© OpenStreetMap contributors",
+                    },
+                },
+                layers: [{ id: "osm-layer", type: "raster", source: "osm" }],
+            },
+            // Singapore Strait, matching the default view on the other tabs.
+            center: [103.6, 1.3],
+            zoom: 10,
+            pitch: 55,
+            bearing: -15,
+            attributionControl: false,
+        });
+
+        map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }));
+
+        const emptyCollection = { type: "FeatureCollection", features: [] };
+        window.lastClickedTrackId = "";
+        window.selectedTrackId = "";
+        window.setSelectedTrackId = function (trackId) {
+            window.selectedTrackId = trackId;
+            refreshSelectionStyle();
+        };
+
+        let latestTracks = [];
+
+        function tracksToGeoJson(tracks) {
+            return {
+                type: "FeatureCollection",
+                features: tracks.map((track) => ({
+                    type: "Feature",
+                    properties: {
+                        trackId: track.trackId,
+                        kind: track.kind,
+                        label: track.label,
+                        heading: track.heading,
+                        speed: track.speed,
+                        altitude: track.altitude,
+                        selected: track.trackId === window.selectedTrackId,
+                    },
+                    geometry: { type: "Point", coordinates: [track.lon, track.lat] },
+                })),
+            };
+        }
+
+        function refreshSelectionStyle() {
+            const source = map.getSource("tracks");
+            if (source) {
+                source.setData(tracksToGeoJson(latestTracks));
+            }
+        }
+
+        // Called from QML (CesiumGlobeView.qml) with the current track
+        // snapshot as an array of plain objects, roughly every 1.5s. QML
+        // splices JSON.stringify's output directly as a JS argument
+        // expression rather than passing a string to parse (valid JSON is
+        // valid JS literal syntax), avoiding double-escaping.
+        window.updateTracks = function (tracks) {
+            latestTracks = tracks;
+            const source = map.getSource("tracks");
+            if (source) {
+                source.setData(tracksToGeoJson(tracks));
+            }
+        };
+
+        map.on("load", () => {
+            map.addSource("tracks", { type: "geojson", data: emptyCollection });
+
+            map.addLayer({
+                id: "tracks-layer",
+                type: "circle",
+                source: "tracks",
+                paint: {
+                    "circle-radius": ["case", ["get", "selected"], 10, 6],
+                    "circle-color": ["match", ["get", "kind"], "AIR", "#2d8cff", "SEA", "#2dd881", "#cccccc"],
+                    "circle-stroke-color": ["case", ["get", "selected"], "#ffd54f", "#ffffff"],
+                    "circle-stroke-width": ["case", ["get", "selected"], 3, 1],
+                },
+            });
+
+            map.addLayer({
+                id: "tracks-labels",
+                type: "symbol",
+                source: "tracks",
+                layout: {
+                    "text-field": ["get", "label"],
+                    "text-font": ["Open Sans Semibold"],
+                    "text-size": 11,
+                    "text-offset": [0, 1.4],
+                    "text-anchor": "top",
+                },
+                paint: {
+                    "text-color": "#ffffff",
+                    "text-halo-color": "#000000",
+                    "text-halo-width": 1,
+                },
+            });
+
+            // Click-to-select: QtWebEngine's QML side polls window.lastClickedTrackId
+            // rather than using a WebChannel, to keep this bridge to a single
+            // mechanism (runJavaScript) instead of adding a second IPC path.
+            map.on("click", "tracks-layer", (e) => {
+                if (e.features && e.features.length > 0) {
+                    window.lastClickedTrackId = e.features[0].properties.trackId;
+                }
+            });
+            map.on("mouseenter", "tracks-layer", () => { map.getCanvas().style.cursor = "pointer"; });
+            map.on("mouseleave", "tracks-layer", () => { map.getCanvas().style.cursor = ""; });
+        });
+    </script>
+</body>
+</html>
